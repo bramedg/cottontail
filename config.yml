@@ -1,0 +1,29 @@
+routes:
+  "/v1/storage":
+    get:
+      exchange: "amq.topic"
+      routingKey: "orders.get"
+      replyRoutingKey: "orders.get.reply"
+      timeoutMs: 3000
+      timeoutStatusCode: 504
+      timeoutMessage: "Orders retrieval timed out"
+    post:
+      exchange: "amq.topic"
+      routingKey: "orders.create"
+      replyRoutingKey: "orders.create.reply"
+      timeoutMs: 5000
+      timeoutStatusCode: 504
+      timeoutMessage: "Order creation timed out"
+  "/v1/users":
+    post:
+      routingKey: "users.create"
+    get:
+      routingKey: "users.get"
+      replyRoutingKey: "users.get.reply"
+  "/v1/products/:id":
+    delete:
+      routingKey: "products.delete"
+      replyRoutingKey: "products.delete.reply"
+      timeoutMs: 4000
+      timeoutStatusCode: 504
+      timeoutMessage: "Product delete timed out"
