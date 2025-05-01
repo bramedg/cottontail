@@ -1,11 +1,5 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Post,
-  Put,
-  Query,
   Req,
   Res,
   All,
@@ -14,7 +8,8 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AmqpService } from './amqp/amqp.service';
 import { Request, Response } from 'express';
-import { pathToRegexp, match } from 'path-to-regexp';
+import { match } from 'path-to-regexp';
+import { DEFAULT_TIMEOUT } from './constants';
 
 @Controller('*')
 export class AppController {
@@ -27,7 +22,7 @@ export class AppController {
     this.routeConfig = this.configService.get('routes') || {};
   }
 
-
+  // Find the correct AMQP route from the config file based on the HTTP request
   private findRoute(path: string, method: string) {
     for (const configPath in this.routeConfig) {
       const matcher = match(configPath, { decode: decodeURIComponent });
@@ -44,6 +39,7 @@ export class AppController {
   }
   
 
+  // Handle all incoming HTTP requests
   private async handleHttp(req: Request, res: Response) {
     const method = req.method.toLowerCase();
     const path = req.path;
@@ -54,12 +50,13 @@ export class AppController {
       throw new HttpException(`No routing config for ${method.toUpperCase()} ${path}`, 404);
     }
 
+    // Merge, path, query, and body into a single request payload
     const payload = { ...req.query, ...req.body, ...req.params };
 
     const exchange = config.exchange;
     const routingKey = config.routingKey;
     const replyRoutingKey = config.replyRoutingKey;
-    const timeoutMs = config.timeoutMs ?? 5000;
+    const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT;
     const timeoutStatusCode = config.timeoutStatusCode ?? 504;
     const timeoutMessage = config.timeoutMessage ?? 'Request timed out';
 

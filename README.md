@@ -20,8 +20,8 @@
 ## 📦 Project Structure
 
 ```
-src/
-  config.yml         # Route configuration
+src                  # Source Code
+config.yml           # Route configuration
 Dockerfile           # Build instructions for Cottontail
 docker-compose.yml   # Setup RabbitMQ and Cottontail together
 package.json         # Project dependencies and scripts
@@ -116,7 +116,7 @@ If no reply is expected, you'll get:
 
 ## 📜 License
 
-MIT © 2025 Your Name / Your Organization
+MIT © 2025 Daniel Brame
 
 ---
 

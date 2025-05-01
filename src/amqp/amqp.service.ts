@@ -1,5 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as amqp from 'amqplib';
+import { randomUUID } from 'crypto';
+import { APP_ID, AMQP_URL } from 'src/constants';
+
 
 @Injectable()
 export class AmqpService implements OnModuleInit, OnModuleDestroy {
@@ -7,7 +10,7 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
   private channel: amqp.Channel;
 
   async onModuleInit() {
-    this.connection = await amqp.connect('amqp://localhost');
+    this.connection = await amqp.connect(AMQP_URL);
     this.channel = await this.connection.createChannel();
   }
 
@@ -23,13 +26,16 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
     message: any,
     timeoutMs: number,
   ): Promise<any> {
-    const corrId = Math.random().toString() + Math.random().toString();
+    const uid = randomUUID();
+    const corrId = `${APP_ID}-${uid}`
 
     const responsePromise = new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error('timeout'));
       }, timeoutMs);
 
+      // Ensure the listening queue exists, bind to it, and listen for replies.  Only respond to this thread when the
+      // correlation id we initiated with is the one on the message coming back
       this.channel.assertQueue(responseQueue).then(() => {
         this.channel
           .bindQueue(responseQueue, exchange, responseQueue)
@@ -51,6 +57,7 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
       });
     });
 
+    // Publish to the supplied exchange, and routing key.  Include the response queue in the replyTo
     await this.channel.publish(
       exchange,
       requestRoutingKey,
@@ -61,6 +68,7 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
     return responsePromise;
   }
 
+  // Publish without waiting for a reply
   async publishNoWait(requestQueue: string, message: any) {
     await this.channel.sendToQueue(
       requestQueue,
