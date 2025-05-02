@@ -1,15 +1,16 @@
 import {
+  All,
   Controller,
+  HttpException,
   Req,
   Res,
-  All,
-  HttpException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AmqpService } from './amqp/amqp.service';
 import { Request, Response } from 'express';
 import { match } from 'path-to-regexp';
 import { DEFAULT_TIMEOUT } from './constants';
+import * as jmespath from 'jmespath';
 
 @Controller('*')
 export class AppController {
@@ -37,7 +38,24 @@ export class AppController {
     }
     return null;
   }
-  
+
+
+  private applyInputMapping(mapping: Record<string, string>, sources: { body: any; query: any; params: any }) {
+    const result: Record<string, any> = {};
+
+    for (const [key, expression] of Object.entries(mapping)) {
+      let sourceKey = 'body';
+      if (expression.startsWith('query.')) sourceKey = 'query';
+      if (expression.startsWith('params.')) sourceKey = 'params';
+
+      const jmes = expression.replace(/^(body|query|params)\./, '');
+      const source = sources[sourceKey];
+      result[key] = jmespath.search(source, jmes);
+    }
+
+    return result;
+  }
+
 
   // Handle all incoming HTTP requests
   private async handleHttp(req: Request, res: Response) {
@@ -50,8 +68,17 @@ export class AppController {
       throw new HttpException(`No routing config for ${method.toUpperCase()} ${path}`, 404);
     }
 
-    // Merge, path, query, and body into a single request payload
-    const payload = { ...req.query, ...req.body, ...req.params };
+    // Map path, query, and body into a single request payload
+    let payload;
+    if (config.inputMapping) {
+      payload = this.applyInputMapping(config.inputMapping, {
+        body: req.body,
+        query: req.query,
+        params: req.params,
+      });
+    } else {
+      payload = { ...req.query, ...req.body, ...req.params };
+    }
 
     const exchange = config.exchange;
     const routingKey = config.routingKey;
