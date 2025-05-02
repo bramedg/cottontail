@@ -25,6 +25,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "amqplib": "^0.10.7",
+    "jmespath": "^0.16.0",
     "path-to-regexp": "^8.2.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

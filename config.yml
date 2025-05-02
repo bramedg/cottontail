@@ -1,4 +1,14 @@
 routes:
+  "/v1/orders/:userId":
+    post:
+      exchange: "amq.topic"
+      routingKey: "orders.create"
+      replyRoutingKey: "orders.create.reply"
+      inputMapping:
+        user: "params.path[2]"
+        product: "body.item.sku"
+        quantity: "query.qty"
+        notes: "body.note"
   "/v1/storage":
     get:
       exchange: "amq.topic"
