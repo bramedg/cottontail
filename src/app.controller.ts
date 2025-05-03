@@ -87,19 +87,25 @@ export class AppController {
     const timeoutStatusCode = config.timeoutStatusCode ?? 504;
     const timeoutMessage = config.timeoutMessage ?? 'Request timed out';
 
-    if (replyRoutingKey) {
-      try {
-        const response = await this.amqpService.publishAndWait(exchange, routingKey, replyRoutingKey, payload, timeoutMs);
-        return res.status(200).json(response);
-      } catch (error) {
-        if (error.message === 'timeout') {
-          return res.status(timeoutStatusCode).json({ message: timeoutMessage });
-        }
-        return res.status(500).json({ message: 'Internal server error' });
-      }
+    const allRequiredParamsProvided = exchange && routingKey;
+
+    if(!allRequiredParamsProvided) {
+      return res.status(500).json({ message: `Incomplete Configuration for route ${method} : ${path}`});
     } else {
-      await this.amqpService.publishNoWait(routingKey, payload);
-      return res.status(200).json({ status: 'OK' });
+      if (replyRoutingKey) {
+        try {
+          const response = await this.amqpService.publishAndWait(exchange, routingKey, replyRoutingKey, payload, timeoutMs);
+          return res.status(200).json(response);
+        } catch (error) {
+          if (error.message === 'timeout') {
+            return res.status(timeoutStatusCode).json({ message: timeoutMessage });
+          }
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+      } else {
+        await this.amqpService.publishNoWait(routingKey, payload);
+        return res.status(200).json({ status: 'OK' });
+      }
     }
   }
 
