@@ -11,6 +11,7 @@ import { Request, Response } from 'express';
 import { match } from 'path-to-regexp';
 import { DEFAULT_TIMEOUT } from './constants';
 import * as jmespath from 'jmespath';
+import * as jsonwebtoken from 'jsonwebtoken';
 
 @Controller('*')
 export class AppController {
@@ -36,7 +37,7 @@ export class AppController {
         }
       }
     }
-    return null;
+    return {config:null};
   }
 
 
@@ -82,19 +83,40 @@ export class AppController {
 
     const exchange = config.exchange;
     const routingKey = config.routingKey;
-    const replyRoutingKey = config.replyRoutingKey;
+    const requiredRoles = config.roles || [];
     const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT;
     const timeoutStatusCode = config.timeoutStatusCode ?? 504;
     const timeoutMessage = config.timeoutMessage ?? 'Request timed out';
 
     const allRequiredParamsProvided = exchange && routingKey;
 
+    const jwt = req.headers['authorization']?.split(' ')[1];
+    let claims:any = [];
+    if (jwt) {
+      const decoded = jsonwebtoken.verify(jwt, process.env.JWT_SECRET || "supersecretkey", { algorithms: ['HS256'] });
+      if (decoded) {
+        try {
+          claims = decoded['roles'].split(',') || [];
+          const requirementsSatisfied = requiredRoles.every(role => claims.includes(role))
+
+          if (!requirementsSatisfied) {
+            return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
+          }
+
+        } catch (error) {
+          return res.status(500).json({ message: 'Roles string invalid or not separated by commas.' });
+        }
+        
+      }
+    }
+
+
     if(!allRequiredParamsProvided) {
       return res.status(500).json({ message: `Incomplete Configuration for route ${method} : ${path}`});
     } else {
-      if (replyRoutingKey) {
+      if (routingKey) {
         try {
-          const response = await this.amqpService.publishAndWait(exchange, routingKey, replyRoutingKey, payload, timeoutMs);
+          const response = await this.amqpService.publishAndWait(exchange, routingKey, payload, timeoutMs);
           return res.status(200).json(response);
         } catch (error) {
           if (error.message === 'timeout') {

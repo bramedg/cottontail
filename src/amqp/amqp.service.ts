@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as amqp from 'amqplib';
 import { randomUUID } from 'crypto';
-import { APP_ID, AMQP_URL } from 'src/constants';
+import { APP_ID, AMQP_URL, RESPONSE_QUEUE, RESPONSE_ROUTING_KEY } from 'src/constants';
 
 
 @Injectable()
@@ -22,7 +22,6 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
   async publishAndWait(
     exchange: string,
     requestRoutingKey: string,
-    responseQueue: string,
     message: any,
     timeoutMs: number,
   ): Promise<any> {
@@ -36,12 +35,12 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
 
       // Ensure the listening queue exists, bind to it, and listen for replies.  Only respond to this thread when the
       // correlation id we initiated with is the one on the message coming back
-      this.channel.assertQueue(responseQueue).then(() => {
+      this.channel.assertQueue(RESPONSE_QUEUE).then(() => {
         this.channel
-          .bindQueue(responseQueue, exchange, responseQueue)
+          .bindQueue(RESPONSE_QUEUE, exchange, RESPONSE_ROUTING_KEY)
           .then(() => {
             this.channel.consume(
-              responseQueue,
+              RESPONSE_QUEUE,
               (msg) => {
                 if (msg && msg.properties.correlationId === corrId) {
                   clearTimeout(timeout);
@@ -62,7 +61,7 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
       exchange,
       requestRoutingKey,
       Buffer.from(JSON.stringify(message)),
-      { correlationId: corrId, replyTo: responseQueue },
+      { correlationId: corrId, replyTo: RESPONSE_ROUTING_KEY },
     );
 
     return responsePromise;
