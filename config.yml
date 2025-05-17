@@ -3,6 +3,7 @@ routes:
     post:
       exchange: "amq.topic"
       routingKey: "guardian.request.newuser"
+      rpc: true
       roles:
         - "user"
         - "admin"
@@ -14,6 +15,7 @@ routes:
     post:
       exchange: "amq.topic"
       routingKey: "guardian.request.auth"
+      rpc: true
       inputMapping:
         username: "body.username"
         password: "body.password"

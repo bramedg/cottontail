@@ -9,9 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import { AmqpService } from './amqp/amqp.service';
 import { Request, Response } from 'express';
 import { match } from 'path-to-regexp';
-import { DEFAULT_TIMEOUT } from './constants';
+import { DEFAULT_TIMEOUT, JWT_SECRET } from './constants';
 import * as jmespath from 'jmespath';
 import * as jsonwebtoken from 'jsonwebtoken';
+import * as _ from 'lodash';
 
 @Controller('*')
 export class AppController {
@@ -41,13 +42,14 @@ export class AppController {
   }
 
 
-  private applyInputMapping(mapping: Record<string, string>, sources: { body: any; query: any; params: any }) {
+  private applyInputMapping(mapping: Record<string, string>, sources: { body: any; query: any; params: any; jwt: any }) {
     const result: Record<string, any> = {};
 
     for (const [key, expression] of Object.entries(mapping)) {
       let sourceKey = 'body';
       if (expression.startsWith('query.')) sourceKey = 'query';
       if (expression.startsWith('params.')) sourceKey = 'params';
+      if (expression.startsWith('jwt.')) sourceKey = 'jwt';
 
       const jmes = expression.replace(/^(body|query|params)\./, '');
       const source = sources[sourceKey];
@@ -69,18 +71,7 @@ export class AppController {
       throw new HttpException(`No routing config for ${method.toUpperCase()} ${path}`, 404);
     }
 
-    // Map path, query, and body into a single request payload
-    let payload;
-    if (config.inputMapping) {
-      payload = this.applyInputMapping(config.inputMapping, {
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
-    } else {
-      payload = { ...req.query, ...req.body, ...req.params };
-    }
-
+    const isRpc = config.rpc || false;
     const exchange = config.exchange;
     const routingKey = config.routingKey;
     const requiredRoles = config.roles || [];
@@ -88,16 +79,16 @@ export class AppController {
     const timeoutStatusCode = config.timeoutStatusCode ?? 504;
     const timeoutMessage = config.timeoutMessage ?? 'Request timed out';
 
-    const allRequiredParamsProvided = exchange && routingKey;
+    const jwt = _.get(req, 'headers.authorization', '').split(' ')[1];
+    let decodedJwt = {};
 
-    const jwt = req.headers['authorization']?.split(' ')[1];
-    let claims:any = [];
-    if (jwt) {
-      const decoded = jsonwebtoken.verify(jwt, process.env.JWT_SECRET || "supersecretkey", { algorithms: ['HS256'] });
-      if (decoded) {
+    let roles:any = [];
+    if (jwt && requiredRoles.length > 0) {
+      decodedJwt = jsonwebtoken.verify(jwt, JWT_SECRET, { algorithms: ['HS256'] });
+      if (decodedJwt) {
         try {
-          claims = decoded['roles'].split(',') || [];
-          const requirementsSatisfied = requiredRoles.every(role => claims.includes(role))
+          roles = decodedJwt['roles'].split(',') || [];
+          const requirementsSatisfied = requiredRoles.every(role => roles.includes(role))
 
           if (!requirementsSatisfied) {
             return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
@@ -111,10 +102,28 @@ export class AppController {
     }
 
 
+    // Map path, query, and body into a single request payload
+    let payload;
+    if (config.inputMapping) {
+      payload = this.applyInputMapping(config.inputMapping, {
+        body: req.body,
+        query: req.query,
+        params: req.params,
+        jwt: decodedJwt
+      });
+    } else {
+      payload = { ...req.query, ...req.body, ...req.params, ...decodedJwt };
+    }
+
+
+
+    const allRequiredParamsProvided = exchange && routingKey;
+
+
     if(!allRequiredParamsProvided) {
       return res.status(500).json({ message: `Incomplete Configuration for route ${method} : ${path}`});
     } else {
-      if (routingKey) {
+      if (routingKey && isRpc) {
         try {
           const response = await this.amqpService.publishAndWait(exchange, routingKey, payload, timeoutMs);
           return res.status(200).json(response);
@@ -124,10 +133,13 @@ export class AppController {
           }
           return res.status(500).json({ message: 'Internal server error' });
         }
-      } else {
+      } else if (routingKey) {
         await this.amqpService.publishNoWait(routingKey, payload);
         return res.status(200).json({ status: 'OK' });
+      } else {
+        return res.status(500).json({ message: `Routing key not provided for ${method} : ${path}` });
       }
+
     }
   }
 

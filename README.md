@@ -10,7 +10,7 @@
 
 - YAML-driven dynamic HTTP-to-AMQP routing
 - Supports GET, POST, PUT, DELETE across any path
-- Automatic merging of query, body, and URL params into AMQP message
+- JMESPath driven input mapping
 - Optional reply handling for synchronous responses
 - Configurable timeout settings and custom error messages
 - Fully Dockerized for easy deployment
@@ -40,47 +40,56 @@ routes:
   "/v1/orders":
     get:
       routingKey: "orders.get"
-      replyRoutingKey: "orders.get.reply"
       timeoutMs: 3000
       timeoutStatusCode: 504
       timeoutMessage: "Orders retrieval timed out"
+      roles:
+        - user
+        - orders
     post:
       routingKey: "orders.create"
   "/v1/products/:id":
     delete:
       routingKey: "products.delete"
-      replyRoutingKey: "products.delete.reply"
       timeoutMs: 4000
       timeoutStatusCode: 504
       timeoutMessage: "Product delete timed out"
+      roles:
+        - user
+        - products
+        - admin
 ```
 
 Each HTTP method under a path can define:
 - `routingKey` (required)
-- `replyRoutingKey` (optional)
 - `timeoutMs`, `timeoutStatusCode`, `timeoutMessage` (optional)
+- `roles` (optional)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Getting Started for Admins
 
-### 1. Clone and install
-
-```bash
-git clone https://github.com/your-org/cottontail.git
-cd cottontail
-npm install
-```
-
-### 2. Build and run with Docker Compose
+### 1. Install from NPM
 
 ```bash
-docker-compose up --build
+npm install -g @bramedg/cottontail
 ```
 
-This will:
-- Start a RabbitMQ server (management UI at http://localhost:15672, user/pass: `guest` / `guest`)
-- Build and run the Cottontail gateway (available at http://localhost:3000)
+### 2. Set environment variables
+
+```
+export AMQP_URL="amqp://guest:guest@localhost"
+export JWT_
+export PORT=80
+```
+
+### 4. Create a configuration file using the format described above
+
+### 5. Start Cottontail
+
+```
+cottontail ./my-api-config.yml
+```
 
 ---
 
@@ -92,12 +101,14 @@ curl -X POST http://localhost:3000/v1/orders \
   -d '{"item":"carrot","quantity":12}'
 ```
 
-If a `replyRoutingKey` is configured, the response will contain the reply message.  
+If a `rpc` is set to true, the response will contain the reply message or time out after a specified amount of time.  
 If no reply is expected, you'll get:
 
 ```json
 { "status": "OK" }
 ```
+
+If roles are defined, a JWT token is expected to passed in the Authorization header.  It should contain the username, audience, roles (as a comma seperated string), and audience == 'cottontail'.
 
 ---
 
@@ -106,8 +117,8 @@ If no reply is expected, you'll get:
 | Concept             | Description |
 |---------------------|-------------|
 | `routingKey`         | The AMQP queue/topic to send the request to |
-| `replyRoutingKey`    | Where to wait for a reply (optional) |
-| `query + body + params` | Merged into a single AMQP payload |
+| `rpc            `    | Whether or not we wait for a reply (remote procedure call)|
+| `roles`              | Authorization for specific services |
 | `timeoutMs`          | How long to wait for a reply |
 | `timeoutStatusCode`  | HTTP status to return on timeout |
 | `timeoutMessage`     | Custom timeout error text |

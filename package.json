@@ -1,10 +1,17 @@
 {
-  "name": "cottontail",
+  "name": "@bramedg/cottontail",
   "version": "0.0.1",
-  "description": "",
+  "description": "A lightweight, extensible, and easy-to-use message broker gateway for microservices.",
   "author": "Daniel Brame",
-  "private": true,
+  "private": false,
   "license": "MIT",
+  "bin": {
+    "cottontail": "./dist/main.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bramedg/cottontail.git"
+  },
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
@@ -17,7 +24,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "postbuild": "echo '#!/usr/bin/env node' | cat - ./dist/main.js > temp && mv temp ./dist/main.js && chmod +x ./dist/main.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -29,7 +37,8 @@
     "jsonwebtoken": "^9.0.2",
     "path-to-regexp": "^8.2.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sinon": "^20.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
@@ -65,6 +74,13 @@
       "ts"
     ],
     "rootDir": "src",
+    "moduleDirectories": [
+      "node_modules",
+      "src"
+    ],
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
