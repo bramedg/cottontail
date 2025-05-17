@@ -1,6 +1,6 @@
 {
   "name": "@bramedg/cottontail",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A lightweight, extensible, and easy-to-use message broker gateway for microservices.",
   "author": "Daniel Brame",
   "private": false,
