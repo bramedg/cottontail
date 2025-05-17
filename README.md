@@ -79,7 +79,7 @@ npm install -g @bramedg/cottontail
 
 ```
 export AMQP_URL="amqp://guest:guest@localhost"
-export JWT_
+export JWT_SECRET="mysupersecretkey"
 export PORT=80
 ```
 
