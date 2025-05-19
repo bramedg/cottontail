@@ -11,11 +11,11 @@ routes:
         username: "body.username"
         password: "body.password"
         roles: "body.roles"
-  "/auth":
+  "/auth/:username":
     post:
       exchange: "amq.topic"
       routingKey: "guardian.request.auth"
       rpc: true
       inputMapping:
-        username: "body.username"
+        username: "params.username"
         password: "body.password"

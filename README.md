@@ -33,37 +33,42 @@ README.md            # You're here!
 
 ## 🧩 Configuration (YAML)
 
-Example `src/config.yml`:
+Example `config.yml`:
 
 ```yaml
 routes:
-  "/v1/orders":
-    get:
-      routingKey: "orders.get"
-      timeoutMs: 3000
-      timeoutStatusCode: 504
-      timeoutMessage: "Orders retrieval timed out"
-      roles:
-        - user
-        - orders
+  "/new_user":
     post:
-      routingKey: "orders.create"
-  "/v1/products/:id":
-    delete:
-      routingKey: "products.delete"
-      timeoutMs: 4000
-      timeoutStatusCode: 504
-      timeoutMessage: "Product delete timed out"
+      exchange: "amq.topic"
+      routingKey: "guardian.request.newuser"
+      rpc: true
+      timeoutMs: 3000
+      timeoutStatusCode: 504      
       roles:
-        - user
-        - products
-        - admin
+        - "user"
+        - "admin"
+      inputMapping:
+        username: "body.username"
+        password: "body.password"
+        roles: "body.roles"
+  "/auth/:username":
+    post:
+      exchange: "amq.topic"
+      routingKey: "guardian.request.auth"
+      rpc: true
+      timeoutMs: 3000
+      timeoutStatusCode: 504      
+      inputMapping:
+        username: "params.username"
+        password: "body.password"
 ```
 
 Each HTTP method under a path can define:
 - `routingKey` (required)
 - `timeoutMs`, `timeoutStatusCode`, `timeoutMessage` (optional)
 - `roles` (optional)
+- `inputMapping` (optional, but highly suggested.  query, body, params, and jwt are supported as sources)
+- `rpc` (optional)
 
 ---
 
@@ -122,6 +127,7 @@ If roles are defined, a JWT token is expected to passed in the Authorization hea
 | `timeoutMs`          | How long to wait for a reply |
 | `timeoutStatusCode`  | HTTP status to return on timeout |
 | `timeoutMessage`     | Custom timeout error text |
+| `inputMapping`       | Mapping from the source HTTP request to the body of the AMQP message |
 
 ---
 

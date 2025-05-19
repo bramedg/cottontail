@@ -65,7 +65,7 @@ export class AppController {
     const method = req.method.toLowerCase();
     const path = req.path;
 
-    const config:any = (this.findRoute(path, method) as any).config;
+    const { config, params } = (this.findRoute(path, method) as any);
 
     if (!config) {
       throw new HttpException(`No routing config for ${method.toUpperCase()} ${path}`, 404);
@@ -108,11 +108,11 @@ export class AppController {
       payload = this.applyInputMapping(config.inputMapping, {
         body: req.body,
         query: req.query,
-        params: req.params,
+        params: params,
         jwt: decodedJwt
       });
     } else {
-      payload = { ...req.query, ...req.body, ...req.params, ...decodedJwt };
+      payload = { ...req.query, ...req.body, ...params, ...decodedJwt };
     }
 
 
