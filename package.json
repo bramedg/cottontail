@@ -28,6 +28,7 @@
     "postbuild": "echo '#!/usr/bin/env node' | cat - ./dist/main.js > temp && mv temp ./dist/main.js && chmod +x ./dist/main.js"
   },
   "dependencies": {
+    "multer": ">=2.0.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -41,6 +42,7 @@
     "sinon": "^20.0.0"
   },
   "devDependencies": {
+    "multer": ">=2.0.0",
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
     "@nestjs/cli": "^11.0.0",
