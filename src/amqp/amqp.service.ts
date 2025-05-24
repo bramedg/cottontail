@@ -23,6 +23,8 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
     exchange: string,
     requestRoutingKey: string,
     message: any,
+    headers: any,
+    properties: any,
     timeoutMs: number,
   ): Promise<any> {
     const uid = randomUUID();
@@ -61,16 +63,17 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
       exchange,
       requestRoutingKey,
       Buffer.from(JSON.stringify(message)),
-      { correlationId: corrId, replyTo: RESPONSE_ROUTING_KEY },
+      { correlationId: corrId, replyTo: RESPONSE_ROUTING_KEY, ...properties, headers },
     );
 
     return responsePromise;
   }
 
   // Publish without waiting for a reply
-  async publishNoWait(requestQueue: string, message: any) {
-    await this.channel.sendToQueue(
-      requestQueue,
+  async publishNoWait(exchange: string, requestRoutingKey:string, message: any, headers: any, properties: any) {
+    await this.channel.publish(
+      exchange,
+      requestRoutingKey,
       Buffer.from(JSON.stringify(message)),
     );
   }

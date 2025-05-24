@@ -6,6 +6,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   cottontail:
     build: .
@@ -16,4 +21,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - AMQPURL=amqp://rabbitmq
+      - AMQP_URL=amqp://rabbitmq
+    restart: always
+    volumes:
+      - ${PWD}/config.yml:/app/config.yml
