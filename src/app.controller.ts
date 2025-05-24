@@ -103,29 +103,46 @@ export class AppController {
 
 
     // Map path, query, and body into a single request payload
-    let payload;
+    let mappedHeaders = {};
+    let mappedProperties = {};
+    let mappedPayload = {};
     if (config.inputMapping) {
-      payload = this.applyInputMapping(config.inputMapping, {
+
+      const inputMappingHeaders = _.get(config, 'inputMapping.headers', {});
+      const inputMappingProperties = _.get(config, 'inputMapping.properties', {});
+
+      mappedHeaders = this.applyInputMapping(inputMappingHeaders, {
+        body: req.body,
+        query: req.query,
+        params: params,
+        jwt: decodedJwt
+      });
+      
+      mappedProperties = this.applyInputMapping(inputMappingProperties, {
+        body: req.body,
+        query: req.query,
+        params: params,
+        jwt: decodedJwt
+      });
+
+      mappedPayload = this.applyInputMapping(_.omit(config.inputMapping, ['headers','properties']), {
         body: req.body,
         query: req.query,
         params: params,
         jwt: decodedJwt
       });
     } else {
-      payload = { ...req.query, ...req.body, ...params, ...decodedJwt };
+      mappedPayload = { ...req.query, ...req.body, ...params, ...decodedJwt };
     }
 
-
-
     const allRequiredParamsProvided = exchange && routingKey;
-
 
     if(!allRequiredParamsProvided) {
       return res.status(500).json({ message: `Incomplete Configuration for route ${method} : ${path}`});
     } else {
       if (routingKey && isRpc) {
         try {
-          const response = await this.amqpService.publishAndWait(exchange, routingKey, payload, timeoutMs);
+          const response = await this.amqpService.publishAndWait(exchange, routingKey, mappedPayload, mappedHeaders, mappedProperties, timeoutMs);
           return res.status(200).json(response);
         } catch (error) {
           if (error.message === 'timeout') {
@@ -134,7 +151,7 @@ export class AppController {
           return res.status(500).json({ message: 'Internal server error' });
         }
       } else if (routingKey) {
-        await this.amqpService.publishNoWait(routingKey, payload);
+        await this.amqpService.publishNoWait(exchange, routingKey, mappedPayload, mappedHeaders, mappedProperties);
         return res.status(200).json({ status: 'OK' });
       } else {
         return res.status(500).json({ message: `Routing key not provided for ${method} : ${path}` });

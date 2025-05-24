@@ -42,11 +42,11 @@ routes:
       exchange: "amq.topic"
       routingKey: "guardian.request.newuser"
       rpc: true
-      timeoutMs: 3000
-      timeoutStatusCode: 504      
       roles:
         - "user"
         - "admin"
+      timeoutMs: 3000
+      timeoutStatusCode: 504 
       inputMapping:
         username: "body.username"
         password: "body.password"
@@ -57,8 +57,10 @@ routes:
       routingKey: "guardian.request.auth"
       rpc: true
       timeoutMs: 3000
-      timeoutStatusCode: 504      
+      timeoutStatusCode: 504 
       inputMapping:
+        headers:
+          x-username: "params.username"
         username: "params.username"
         password: "body.password"
 ```
