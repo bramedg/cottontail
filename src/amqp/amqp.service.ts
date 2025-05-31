@@ -19,6 +19,31 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
     await this.connection.close();
   }
 
+  async listen(
+    exchange: string,
+    routingKey: string,
+    callback: (msg: amqp.ConsumeMessage | null) => void,
+  ): Promise<void> {
+    // Ensure the exchange exists
+    await this.channel.assertExchange(exchange, 'topic', { durable: true });
+    // Ensure the queue exists
+    const queue = await this.channel.assertQueue('', { exclusive: true });
+    // Bind the queue to the exchange with the routing key
+    await this.channel.bindQueue(queue.queue, exchange, routingKey);
+    // Start consuming messages from the queue
+    await this.channel.consume(queue.queue, (msg) => {
+      if (msg) {
+        // Acknowledge the message
+        this.channel.ack(msg);
+        // Call the provided callback with the message
+        callback(msg);
+      } else {
+        // If the message is null, it means the consumer was cancelled
+        console.warn('Consumer cancelled, no message received');
+      }
+    }, { noAck: false });
+  }
+
   async publishAndWait(
     exchange: string,
     requestRoutingKey: string,

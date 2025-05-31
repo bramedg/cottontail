@@ -1,23 +1,17 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AmqpService } from './amqp/amqp.service';
-import * as yaml from 'js-yaml';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import * as _ from 'lodash';
-import { CONFIG_FILE_SOURCE } from './constants';
+import { StreamModule } from './stream/stream.module';
+import { AmqpModule } from './amqp/amqp.module';
+import { RouteConfigModule } from './route-config/route-config.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      load: [
-        () => yaml.load(readFileSync(CONFIG_FILE_SOURCE))
-      ],
-    }),
+    StreamModule,
+    AmqpModule,
+    RouteConfigModule,
   ],
   controllers: [AppController],
-  providers: [AmqpService],
+  providers: [],
 })
 export class AppModule {}

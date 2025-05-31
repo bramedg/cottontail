@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AmqpService } from 'src/amqp/amqp.service';
-import { spyOn } from 'jest-mock';
-
+import { TestBed } from '@suites/unit';
+import { RouteConfigService } from './route-config/route-config.service';
+import { RouteConfigLoaderService } from './route-config/route-config-loader-service';
 jest.mock('src/amqp/amqp.service');
 jest.mock('@nestjs/config');
 
@@ -15,41 +16,21 @@ describe('AppController', () => {
     let req: Request;
     let res: Response;
 
-    beforeEach(() => {
+    beforeEach(async () => {
         req = {} as Request;
         res = {} as Response;
 
-        jest.spyOn(configService, 'get').mockImplementation((item) => {
-            return {
-                    '/test_rpc': {
-                        get: {
-                            rpc: true,
-                            exchange: 'test_exchange',
-                            routingKey: 'test.routing.key'
-                        }
-                    },
-                    '/test_non_rpc': {
-                        get: {
-                            exchange: 'test_exchange',
-                            routingKey: 'test.routing.key'
-                        }
-                    },
-            }
-        });
+        const { unit, unitRef } = await TestBed.sociable(AppController)
+            .expose(RouteConfigService)
+            .expose(RouteConfigLoaderService)
+            .mock(AmqpService).final({
+                publishAndWait: jest.fn().mockResolvedValue({ status: 200, data: 'test' }),
+                publishNoWait: jest.fn(),
+                listen: jest.fn(),
+            })
+            .compile();
 
-        jest.spyOn(amqpService, 'publishAndWait').mockImplementation((exchange, routingKey, message, timeoutMs) => {
-            return new Promise((resolve) => {
-                resolve({status: 200, data: 'test'});
-            });
-        });
-
-        jest.spyOn(amqpService, 'publishNoWait').mockImplementation((routingKey, message) => {
-            return new Promise((resolve) => {
-                resolve({status: 200, data: 'test'});
-            });
-        });
-
-        appController = new AppController(configService, amqpService);
+        appController = unit;
 
     })
 

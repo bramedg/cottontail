@@ -8,39 +8,19 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AmqpService } from './amqp/amqp.service';
 import { Request, Response } from 'express';
-import { match } from 'path-to-regexp';
-import { DEFAULT_TIMEOUT, JWT_SECRET } from './constants';
 import * as jmespath from 'jmespath';
+
+import { DEFAULT_TIMEOUT, JWT_SECRET } from './constants';
+
 import * as jsonwebtoken from 'jsonwebtoken';
 import * as _ from 'lodash';
+import { RouteConfigService } from './route-config/route-config.service';
 
 @Controller('*')
 export class AppController {
   private routeConfig: any;
 
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly amqpService: AmqpService,
-  ) {
-    this.routeConfig = this.configService.get('routes') || {};
-  }
-
-  // Find the correct AMQP route from the config file based on the HTTP request
-  private findRoute(path: string, method: string) {
-    for (const configPath in this.routeConfig) {
-      const matcher = match(configPath, { decode: decodeURIComponent });
-      const matched = matcher(path);
-  
-      if (matched) {
-        const methodConfig = this.routeConfig[configPath][method.toLowerCase()];
-        if (methodConfig) {
-          return { config: methodConfig, params: matched.params };
-        }
-      }
-    }
-    return {config:null};
-  }
-
+  constructor(private readonly amqpService: AmqpService, private readonly routeConfigService: RouteConfigService) {}
 
   private applyInputMapping(mapping: Record<string, string>, sources: { body: any; query: any; params: any; jwt: any }) {
     const result: Record<string, any> = {};
@@ -59,48 +39,34 @@ export class AppController {
     return result;
   }
 
-
   // Handle all incoming HTTP requests
   private async handleHttp(req: Request, res: Response) {
     const method = req.method.toLowerCase();
     const path = req.path;
+    const bearerToken = _.get(req, 'headers.authorization', '').split(' ')[1];
+    let decodedJwt = {};
+    let methodConfig;
 
-    const { config, params } = (this.findRoute(path, method) as any);
-
-    if (!config) {
-      throw new HttpException(`No routing config for ${method.toUpperCase()} ${path}`, 404);
+    try {
+      methodConfig = this.routeConfigService.findMethodConfig(path, method);
+    } catch (error) {
+      return res.status(404).json({ message: error.message });
     }
 
-    const isRpc = config.rpc || false;
-    const exchange = config.exchange;
-    const routingKey = config.routingKey;
-    const requiredRoles = config.roles || [];
+    const { config, params } = methodConfig;
+
+    try {
+      decodedJwt = this.routeConfigService.validateRouteAuthorization(config, bearerToken);
+    } catch (error) {
+      return res.status(403).json({ message: error.message });
+    }
+
     const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT;
     const timeoutStatusCode = config.timeoutStatusCode ?? 504;
     const timeoutMessage = config.timeoutMessage ?? 'Request timed out';
-
-    const jwt = _.get(req, 'headers.authorization', '').split(' ')[1];
-    let decodedJwt = {};
-
-    let roles:any = [];
-    if (jwt && requiredRoles.length > 0) {
-      decodedJwt = jsonwebtoken.verify(jwt, JWT_SECRET, { algorithms: ['HS256'] });
-      if (decodedJwt) {
-        try {
-          roles = decodedJwt['roles'].split(',') || [];
-          const requirementsSatisfied = requiredRoles.every(role => roles.includes(role))
-
-          if (!requirementsSatisfied) {
-            return res.status(403).json({ message: 'Forbidden: Insufficient permissions' });
-          }
-
-        } catch (error) {
-          return res.status(500).json({ message: 'Roles string invalid or not separated by commas.' });
-        }
-        
-      }
-    }
-
+    const isRpc = config.rpc || false;
+    const exchange = config.exchange;
+    const routingKey = config.routingKey;
 
     // Map path, query, and body into a single request payload
     let mappedHeaders = {};

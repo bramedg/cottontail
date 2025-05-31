@@ -13,7 +13,7 @@
             "cwd": "${workspaceFolder}"
         },
         {
-            "command": "npm test",
+            "command": "npm test -i ./src/app.controller.spec.ts",
             "name": "Debug Tests",
             "request": "launch",
             "type": "node-terminal",
