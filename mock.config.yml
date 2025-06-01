@@ -1,14 +1,15 @@
 streams:
 
 routes:
-  "/sample-stream":
+  "/test_stream":
     sse:
       exchange: "amq.topic"
       routingKey: "sample.stream"
       roles:
         - "user"
-  "/new_user":
-    post:
+        - "admin"
+  "/test_rpc":
+    get:
       exchange: "amq.topic"
       routingKey: "guardian.request.newuser"
       rpc: true
@@ -21,15 +22,17 @@ routes:
         username: "body.username"
         password: "body.password"
         roles: "body.roles"
-  "/auth/:username":
-    post:
+  "/test_non_rpc":
+    get:
       exchange: "amq.topic"
-      routingKey: "guardian.request.auth"
-      rpc: true
+      routingKey: "guardian.request.newuser"
+      rpc: false
+      roles:
+        - "user"
+        - "admin"
       timeoutMs: 3000
       timeoutStatusCode: 504 
       inputMapping:
-        headers:
-          x-username: "params.username"
-        username: "params.username"
+        username: "body.username"
         password: "body.password"
+        roles: "body.roles"

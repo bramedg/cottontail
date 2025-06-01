@@ -10,10 +10,13 @@
             "name": "Debug Cottontail",
             "request": "launch",
             "type": "node-terminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "DEBUG_MODE": "1"
+            }
         },
         {
-            "command": "npm test",
+            "command": "npm test -i ./src/app.controller.spec.ts",
             "name": "Debug Tests",
             "request": "launch",
             "type": "node-terminal",
