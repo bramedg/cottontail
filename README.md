@@ -37,6 +37,12 @@ Example `config.yml`:
 
 ```yaml
 routes:
+  "/sample-stream":
+    sse:
+      exchange: "amq.topic"
+      routingKey: "sample.stream"
+      roles:
+        - "user"
   "/new_user":
     post:
       exchange: "amq.topic"
@@ -71,6 +77,12 @@ Each HTTP method under a path can define:
 - `roles` (optional)
 - `inputMapping` (optional, but highly suggested.  query, body, params, and jwt are supported as sources)
 - `rpc` (optional)
+
+Streams are SSE get requests and require a two step process to use.
+- POST to /streams/auth/yourstreamname with the JWT token containing your authorization data.
+- GET to /streams/listen/yourstreamname with the cookie retrived from the POST
+
+Note that streams are text only and must be parsed if the expected client result is JSON.
 
 ---
 
