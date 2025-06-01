@@ -5,20 +5,16 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AmqpService } from './amqp/amqp.service';
+import { AmqpService } from 'src/amqp/amqp.service';
 import { Request, Response } from 'express';
 import * as jmespath from 'jmespath';
-
-import { DEFAULT_TIMEOUT, JWT_SECRET } from './constants';
-
-import * as jsonwebtoken from 'jsonwebtoken';
+import { DEFAULT_TIMEOUT } from 'src/constants';
 import * as _ from 'lodash';
-import { RouteConfigService } from './route-config/route-config.service';
+import { RouteConfigService } from 'src/route-config/route-config.service';
+
 
 @Controller('*')
-export class AppController {
-  private routeConfig: any;
+export class RpcController {  private routeConfig: any;
 
   constructor(private readonly amqpService: AmqpService, private readonly routeConfigService: RouteConfigService) {}
 
@@ -129,5 +125,4 @@ export class AppController {
   @All()
   async all(@Req() req: Request, @Res() res: Response) {
     return this.handleHttp(req, res);
-  }
-}
+  }}

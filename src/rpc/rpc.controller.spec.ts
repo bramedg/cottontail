@@ -1,17 +1,17 @@
 import { ConfigService } from '@nestjs/config';
-import { AppController } from './app.controller';
 import { AmqpService } from 'src/amqp/amqp.service';
 import { TestBed } from '@suites/unit';
-import { RouteConfigService } from './route-config/route-config.service';
-import { RouteConfigLoaderService } from './route-config/route-config-loader-service';
+import { RouteConfigService } from 'src/route-config/route-config.service';
+import { RouteConfigLoaderService } from 'src/route-config/route-config-loader-service';
+import { RpcController } from './rpc.controller';
 jest.mock('src/amqp/amqp.service');
 jest.mock('@nestjs/config');
 
-describe('AppController', () => {
+describe('rpcController', () => {
 
     let configService: any = new ConfigService();
     let amqpService: any = new AmqpService();
-    let appController!: AppController;
+    let rpcController!: RpcController;
 
     let req: Request;
     let res: Response;
@@ -20,7 +20,7 @@ describe('AppController', () => {
         req = {} as Request;
         res = {} as Response;
 
-        const { unit, unitRef } = await TestBed.sociable(AppController)
+        const { unit, unitRef } = await TestBed.sociable(RpcController)
             .expose(RouteConfigService)
             .expose(RouteConfigLoaderService)
             .mock(AmqpService).final({
@@ -30,7 +30,7 @@ describe('AppController', () => {
             })
             .compile();
 
-        appController = unit;
+        rpcController = unit;
 
     })
 
@@ -39,7 +39,7 @@ describe('AppController', () => {
     })
 
     it('should be defined', () => {
-        expect(appController).toBeDefined();
+        expect(rpcController).toBeDefined();
     });
 
     it('should route correctly for rpc', () => {
@@ -58,7 +58,7 @@ describe('AppController', () => {
         } as unknown as Response;
 
 
-        return appController.all(request, response).then((route: any) => {
+        return rpcController.all(request, response).then((route: any) => {
             expect(response.json).toHaveBeenCalledWith({
                 status: 200,
                 data: 'test'
@@ -82,7 +82,7 @@ describe('AppController', () => {
         } as unknown as Response;
 
 
-        return appController.all(request, response).then((route: any) => {
+        return rpcController.all(request, response).then((route: any) => {
             expect(response.json).toHaveBeenCalledWith({
                 status: "OK"
             });

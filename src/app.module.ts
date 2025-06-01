@@ -1,17 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AmqpService } from './amqp/amqp.service';
 import { StreamModule } from './stream/stream.module';
-import { AmqpModule } from './amqp/amqp.module';
-import { RouteConfigModule } from './route-config/route-config.module';
+import { RpcModule } from './rpc/rpc.module';
 
 @Module({
   imports: [
     StreamModule,
-    AmqpModule,
-    RouteConfigModule,
+    RpcModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [],
 })
 export class AppModule {}
