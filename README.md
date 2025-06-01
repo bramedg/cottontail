@@ -14,6 +14,8 @@
 - Optional reply handling for synchronous responses
 - Configurable timeout settings and custom error messages
 - Fully Dockerized for easy deployment
+- JWT based authorization
+- Streaming from a queue via SSE
 
 ---
 
@@ -79,8 +81,8 @@ Each HTTP method under a path can define:
 - `rpc` (optional)
 
 Streams are SSE get requests and require a two step process to use.
-- POST to /streams/auth/yourstreamname with the JWT token containing your authorization data.
-- GET to /streams/listen/yourstreamname with the cookie retrived from the POST
+- POST to /stream/auth/yourstreamname with the JWT token containing your authorization data.
+- GET to /stream/listen/yourstreamname with the cookie retrived from the POST
 
 Note that streams are text only and must be parsed if the expected client result is JSON.
 
