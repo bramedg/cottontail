@@ -24,14 +24,16 @@ export class AmqpService implements OnModuleInit, OnModuleDestroy {
     routingKey: string,
     callback: (msg: amqp.ConsumeMessage | null) => void,
   ): Promise<void> {
+    const queueName = `streams_${routingKey.replaceAll('.', '_')}`;
+
     // Ensure the exchange exists
     await this.channel.assertExchange(exchange, 'topic', { durable: true });
     // Ensure the queue exists
-    const queue = await this.channel.assertQueue('', { exclusive: true });
+    const queue = await this.channel.assertQueue(queueName, { exclusive: true });
     // Bind the queue to the exchange with the routing key
-    await this.channel.bindQueue(queue.queue, exchange, routingKey);
+    await this.channel.bindQueue(queueName, exchange, routingKey);
     // Start consuming messages from the queue
-    await this.channel.consume(queue.queue, (msg) => {
+    await this.channel.consume(queueName, (msg) => {
       if (msg) {
         // Acknowledge the message
         this.channel.ack(msg);

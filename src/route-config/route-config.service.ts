@@ -4,7 +4,7 @@ import { match } from 'path-to-regexp';
 import * as jmespath from 'jmespath';
 import * as _ from 'lodash';
 import * as jsonwebtoken from 'jsonwebtoken';
-import { JWT_SECRET } from 'src/constants';
+import { DEBUG_MODE, JWT_SECRET } from 'src/constants';
 import { RouteConfigLoaderService } from './route-config-loader-service';
 
 @Injectable()
@@ -42,7 +42,7 @@ export class RouteConfigService {
 
         let roles: any = [];
         if (bearerToken && requiredRoles.length > 0) {
-            decodedJwt = jsonwebtoken.verify(bearerToken, JWT_SECRET, { algorithms: ['HS256'] });
+            decodedJwt = jsonwebtoken.verify(bearerToken, JWT_SECRET, { algorithms: ['HS256'], ignoreExpiration: DEBUG_MODE }) as any;
             if (decodedJwt) {
                 try {
                     roles = decodedJwt['roles'].split(',') || [];

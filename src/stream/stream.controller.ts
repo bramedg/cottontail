@@ -29,10 +29,11 @@ export class StreamController {
         const { config, params } = methodConfig;
         try {
             const decodedJwt = this.routeConfigService.validateRouteAuthorization(config, jwt);
-            res.cookie('jwt', jwt, {
-                maxAge: decodedJwt['exp'] * 1000 - Date.now(),
+            return res.cookie('jwt', jwt, {
                 httpOnly: true
-            });
+            }).json({
+                message: 'Authenticated successfully',
+                streamId: streamId,});
         } catch (e) {
             return res.status(401).json({ message: 'Unauthorized: Invalid JWT token or insufficient roles granted' });
         }
@@ -58,9 +59,9 @@ export class StreamController {
             return new Observable((observer) => {
                 this.amqpService.listen(
                     'amq.topic',
-                    `streamId`,
+                    `${streamId}`,
                     (msg) => {
-                        observer.next(JSON.parse(msg.content.toString()));
+                        observer.next(msg.content.toString());
                     });
             });
         } catch (e) {

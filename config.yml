@@ -7,7 +7,6 @@ routes:
       routingKey: "sample.stream"
       roles:
         - "user"
-        - "admin"
   "/new_user":
     post:
       exchange: "amq.topic"
